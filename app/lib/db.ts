@@ -1,10 +1,9 @@
 import Database from "better-sqlite3";
 import path from "path";
 
-const dbPath =
-  process.env.DB_PATH
-    ? process.env.DB_PATH
-    : path.join(process.cwd(), "receiptless.db");
+const dbPath = process.env.DB_PATH
+  ? process.env.DB_PATH
+  : path.join(process.cwd(), "receiptless.db");
 
 export const db = new Database(dbPath);
 
@@ -67,15 +66,13 @@ function tryAlter(sql: string) {
   } catch {}
 }
 
-// backward-compatible migrations for older DBs
+// backwards-compatible migrations
 tryAlter(`ALTER TABLE proofs ADD COLUMN status TEXT NOT NULL DEFAULT 'issued'`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN evidencePath TEXT`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN evidenceMime TEXT`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN verifiedAt TEXT`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN rejectedAt TEXT`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN rejectionReason TEXT`);
-
-// NEW: issuer + merchant link columns (safe if already exist)
 tryAlter(`ALTER TABLE proofs ADD COLUMN issuerType TEXT`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN issuerId TEXT`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN merchantId TEXT`);

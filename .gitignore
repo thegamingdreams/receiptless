@@ -40,6 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# local db + uploads
 receiptless.db
 uploads/
+
+# env
+.env
 .env.local
+.env.*.local
