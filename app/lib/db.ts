@@ -69,6 +69,7 @@ function tryAlter(sql: string) {
 // backwards-compatible migrations
 tryAlter(`ALTER TABLE proofs ADD COLUMN status TEXT NOT NULL DEFAULT 'issued'`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN evidencePath TEXT`);
+tryAlter(`ALTER TABLE proofs ADD COLUMN evidenceUploadedAt TEXT`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN evidenceMime TEXT`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN verifiedAt TEXT`);
 tryAlter(`ALTER TABLE proofs ADD COLUMN rejectedAt TEXT`);
