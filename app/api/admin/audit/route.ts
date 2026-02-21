@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 const ADMIN_COOKIE_NAME = "adminSession";
 
-function getSessionId(req: NextRequest) {
+function getAdminSessionId(req: NextRequest) {
   const cookieHeader = req.headers.get("cookie") || "";
   const match = cookieHeader.match(
     new RegExp(`(?:^|;\\s*)${ADMIN_COOKIE_NAME}=([^;]+)`)
@@ -16,20 +16,28 @@ function getSessionId(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const sessionId = getSessionId(req);
-
+  const sessionId = getAdminSessionId(req);
   if (!hasSession(sessionId)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // IMPORTANT: DB query must be inside the handler (not at module scope)
   try {
     const rows = db
-      .prepare("SELECT * FROM audit ORDER BY createdAt DESC LIMIT 200")
+      .prepare(
+        `SELECT id, action, publicId, actorType, actorId, meta, createdAt
+         FROM audit
+         ORDER BY id DESC
+         LIMIT 100`
+      )
       .all();
 
     return NextResponse.json({ rows });
-  } catch (err) {
-    console.error("Audit query failed:", err);
-    return NextResponse.json({ error: "Audit failed" }, { status: 500 });
+  } catch (e: any) {
+    // If audit table somehow missing, don't crash build/runtime
+    return NextResponse.json(
+      { rows: [], warning: String(e?.message || e) },
+      { status: 200 }
+    );
   }
 }
