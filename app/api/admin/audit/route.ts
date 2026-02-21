@@ -1,41 +1,36 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/app/lib/db";
-import { cookies } from "next/headers";
 import { hasSession } from "@/app/lib/adminSession";
 
-function safeParse(s: string) {
-  try {
-    return JSON.parse(s);
-  } catch {
-    return { raw: s };
-  }
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic"; // ✅ prevents static build trying to pre-render
+
+const ADMIN_COOKIE_NAME = "adminSession";
+
+function getAdminSessionId(req: NextRequest) {
+  const cookieHeader = req.headers.get("cookie") || "";
+  const match = cookieHeader.match(
+    new RegExp(`(?:^|;\\s*)${ADMIN_COOKIE_NAME}=([^;]+)`)
+  );
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
-export async function POST(req: Request) {
-  const sessionId = (await cookies()).get("admin_session")?.value;
+export async function GET(req: NextRequest) {
+  const sessionId = getAdminSessionId(req);
   if (!hasSession(sessionId)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({}));
-  const id = String(body.id ?? "").trim();
-  if (!id) {
-    return NextResponse.json({ error: "Missing id" }, { status: 400 });
-  }
+  // If your audit table name is different, change it here
+  // Example assumes a table named "audit"
+  const rows = db
+    .prepare(
+      `SELECT *
+       FROM audit
+       ORDER BY createdAt DESC
+       LIMIT 200`
+    )
+    .all();
 
-  const rows = db.prepare(
-    `SELECT id, event, at, meta
-     FROM audit_logs
-     WHERE proofId = ?
-     ORDER BY at ASC`
-  ).all(id) as any[];
-
-  return NextResponse.json({
-    logs: rows.map((r) => ({
-      id: r.id,
-      event: r.event,
-      at: r.at,
-      meta: r.meta ? safeParse(r.meta) : null,
-    })),
-  });
+  return NextResponse.json({ rows });
 }
