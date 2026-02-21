@@ -3,11 +3,11 @@ import { db } from "@/app/lib/db";
 import { hasSession } from "@/app/lib/adminSession";
 
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic"; // ✅ prevents static build trying to pre-render
+export const dynamic = "force-dynamic";
 
 const ADMIN_COOKIE_NAME = "adminSession";
 
-function getAdminSessionId(req: NextRequest) {
+function getSessionId(req: NextRequest) {
   const cookieHeader = req.headers.get("cookie") || "";
   const match = cookieHeader.match(
     new RegExp(`(?:^|;\\s*)${ADMIN_COOKIE_NAME}=([^;]+)`)
@@ -16,21 +16,20 @@ function getAdminSessionId(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const sessionId = getAdminSessionId(req);
+  const sessionId = getSessionId(req);
+
   if (!hasSession(sessionId)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // If your audit table name is different, change it here
-  // Example assumes a table named "audit"
-  const rows = db
-    .prepare(
-      `SELECT *
-       FROM audit
-       ORDER BY createdAt DESC
-       LIMIT 200`
-    )
-    .all();
+  try {
+    const rows = db
+      .prepare("SELECT * FROM audit ORDER BY createdAt DESC LIMIT 200")
+      .all();
 
-  return NextResponse.json({ rows });
+    return NextResponse.json({ rows });
+  } catch (err) {
+    console.error("Audit query failed:", err);
+    return NextResponse.json({ error: "Audit failed" }, { status: 500 });
+  }
 }
